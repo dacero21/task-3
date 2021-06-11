@@ -74,9 +74,8 @@ mapa=ggplot() + geom_sf(data=depto) + geom_sf(data=c_poblado,col="blue") +
   annotation_north_arrow(location='tr') + ggtitle("Norte de Santander
   Centros poblados y hospitales") +
   xlab("Longitud") + ylab("Latitud") + theme_bw() #Mapa Norte de Santander, Centros poblados y hostpitales
-pdf("views/mapa_norte_santander.pdf") #Abrir pdf
-mapa #Generar el mapa
-dev.off() #cerrar el pdf
+ggsave(plot = mapa,filename = "views/Mapa.pdf") #Guardar el mapa en formato pdf
+
 
 #2. Regresiones 
 rm(list = ls()) # Limpiar el ambiente 
@@ -87,9 +86,7 @@ db=readRDS("data/output/f_mapmuse.rds") #Importar los datos
 ols=lm(formula = fallecido ~ dist_vias + dist_cpoblado + dist_hospi + actividad , data = db) # almacenar y correr regresión
 
 #2.2.
-jpeg(file="views/ols.jpeg") #crear el jpeg 
-coefplot(ols) #Pintar los coeficientes
-dev.off() #Cerrar el jpeg
+ggsave(coefplot(ols),filename="views/ols.png") #Exportar la grafica de coeficientes
 
 #2.3.
 logit = glm(formula = fallecido ~ dist_vias + dist_cpoblado + dist_hospi + actividad , data = db, family = binomial(link = "logit")) #Modelo logit 
@@ -99,8 +96,14 @@ probit = glm(formula = fallecido ~ dist_vias + dist_cpoblado + dist_hospi + acti
 outreg(list("ols" = ols, "logit" = logit,"probit"=probit)) #Mostrar los resultados de los tres modelos en una tabla
 
 #2.5
-
-
+g_logit=tidy(glm(formula = fallecido ~ dist_vias, data = db, family = binomial(link = "logit")), conf.int = TRUE) %>% 
+  ggplot(aes(x=term, y=estimate, ymin=conf.low, ymax=conf.high)) +
+  geom_pointrange() + geom_hline(yintercept = 0, col = "red") #Generar el grafico con el efecto para el modelo logit
+g_probit=tidy(glm(formula = fallecido ~ dist_vias, data = db, family = binomial(link = "probit")), conf.int = TRUE) %>% 
+  ggplot(aes(x=term, y=estimate, ymin=conf.low, ymax=conf.high)) +
+  geom_pointrange() + geom_hline(yintercept = 0, col = "blue") #Generar el grafico con el efecto para el modelo probit
+ggsave(g_logit,filename = "views/logit.png")
+ggsave(g_probit,filename = "views/probit.png")
 
 #3. Web-scraping 
 rm(list = ls()) # Limpiar el ambiente 
@@ -111,7 +114,6 @@ xml_document=read_html(url) #Leer la URL
 
 #3.2.
 html_nodes(xml_document,xpath = '//*[@id="firstHeading"]') %>% html_text() #Extraer el titulo
-
 
 #3.3.
 tablas=readHTMLTable(htmlParse(xml_document),header = T) #Extraer las tablas del HTML
